@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
@@ -16,7 +18,14 @@ void enableRawMode() {
     struct termios raw = orig_termios;
 
     // set flags appropriately
-    raw.c_lflag &= ~(ECHO);     // turn of echoing
+    // turn of echoing, canonical mode, signals, preprocessing, and parity check
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG | BRKINT | IEXTEN | INPCK);
+    // turn off flow control and newline translation
+    raw.c_iflag &= ~(IXON | ICRNL);
+    // turn off output processing
+    raw.c_oflag &= ~(OPOST);
+    // set character size to 8 bits
+    raw.c_cflag |= (CS8);
 
     // set attributes in the actual interface or whatever
     // TCSAFLUSH: flush output written, discarding non-read input before change
@@ -28,6 +37,12 @@ int main() {
 
     // read one character at a time until EOF or 'q' is encountered
     char c;
-    while(read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
+    while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+        if (iscntrl(c)) {
+            printf("%d\r\n", c);
+        } else {
+            printf("%c (%d)\r\n", c, c);
+        }
+    }
     return 0;
 }
