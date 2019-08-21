@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
@@ -6,13 +7,18 @@
 
 struct termios orig_termios;
 
+void die(const char *s) {
+    perror(s);
+    exit(1);
+}
+
 void disableRawMode() {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1) die("tcsetattr");
 }
 
 void enableRawMode() {
     // save original config for restoration
-    tcgetattr(STDIN_FILENO, &orig_termios);
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr");
     atexit(disableRawMode);
 
     struct termios raw = orig_termios;
@@ -33,7 +39,7 @@ void enableRawMode() {
 
     // set attributes in the actual interface or whatever
     // TCSAFLUSH: flush output written, discarding non-read input before change
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
 int main() {
@@ -42,7 +48,7 @@ int main() {
     // read one character at a time until EOF or 'q' is encountered
     while (1) {
         char c = '\0';
-        read(STDIN_FILENO, &c, 1);
+        if (read(STDIN_FILENO, &c, 1) == -1) die("read");
         if (iscntrl(c)) {
             printf("%d\r\n", c);
         } else {
