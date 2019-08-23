@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 
 /*** defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)    // take the 5 least-significant bits of k
@@ -12,6 +13,8 @@
 /*** data ***/
 struct editorConfig {
     struct termios orig_termios;
+    int screenrows;
+    int screencols;
 };
 
 struct editorConfig E;
@@ -64,11 +67,23 @@ char editorReadKey() {
     return c;
 }
 
+
+int getWinSize(int *rows, int *cols) {
+    struct winsize ws;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0){
+        return -1;
+    } else {
+        *rows = ws.ws_row; *cols = ws.ws_col;
+        return 0;
+    }
+}
+
 /*** output ***/
 
 void editorDrawRows() {
     int y;
-    for (y = 0; y < 24; y++) {
+    for (y = 0; y < E.screenrows; y++) {
         write(STDOUT_FILENO, "~\r\n", 3);
     }
 }
@@ -98,8 +113,13 @@ void editorProcessKeypress() {
 
 /*** init ***/
 
+void initEditor() {
+    if (getWinSize(&E.screenrows, &E.screencols) == -1) die("getWinSize");
+}
+
 int main() {
     enableRawMode();
+    initEditor();
 
     while (1) {
         editorRefreshScreen();
