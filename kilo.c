@@ -19,6 +19,8 @@ enum editorkey {
     CURSOR_DOWN,
     CURSOR_LEFT,
     CURSOR_RIGHT,
+    PAGE_UP,
+    PAGE_DOWN,
 };
 
 /*** data ***/
@@ -84,11 +86,21 @@ int editorReadKey() {
         if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
 
         if (seq[0] == '[') {
-            switch (seq[1]) {
-                case 'A': return CURSOR_UP;
-                case 'B': return CURSOR_DOWN;
-                case 'C': return CURSOR_RIGHT;
-                case 'D': return CURSOR_LEFT;
+            if ('0' <= seq[1] && seq[1] <= '9') {
+                if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+                if (seq[2] == '~') {
+                    switch (seq[1]) {
+                        case '5': return PAGE_UP;
+                        case '6': return PAGE_DOWN;
+                    }
+                }
+            } else {
+                switch (seq[1]) {
+                    case 'A': return CURSOR_UP;
+                    case 'B': return CURSOR_DOWN;
+                    case 'C': return CURSOR_RIGHT;
+                    case 'D': return CURSOR_LEFT;
+                }
             }
         }
         return '\x1b';
@@ -237,11 +249,22 @@ void editorProcessKeypress() {
             write(STDOUT_FILENO, "\x1b[H", 3);
             exit(0);
             break;
+
         case CURSOR_UP:
         case CURSOR_DOWN:
         case CURSOR_LEFT:
         case CURSOR_RIGHT:
             editorMoveCursor(c);
+            break;
+
+        case PAGE_UP:
+        case PAGE_DOWN:
+            {
+                int times = E.screenrows;
+                while (times--) {
+                    editorMoveCursor(c == PAGE_UP ? CURSOR_UP : CURSOR_DOWN);
+                }
+            }
             break;
     }
 }
