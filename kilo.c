@@ -21,6 +21,8 @@ enum editorkey {
     CURSOR_RIGHT,
     PAGE_UP,
     PAGE_DOWN,
+    HOME,
+    END,
 };
 
 /*** data ***/
@@ -90,8 +92,12 @@ int editorReadKey() {
                 if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
                 if (seq[2] == '~') {
                     switch (seq[1]) {
+                        case '1': return HOME;
+                        case '4': return END;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
+                        case '7': return HOME;
+                        case '8': return END;
                     }
                 }
             } else {
@@ -100,7 +106,14 @@ int editorReadKey() {
                     case 'B': return CURSOR_DOWN;
                     case 'C': return CURSOR_RIGHT;
                     case 'D': return CURSOR_LEFT;
+                    case 'F': return END;
+                    case 'H': return HOME;
                 }
+            }
+        } else if (seq[0] == 'O' ) {
+            switch (seq[1]) {
+                case 'F': return END;
+                case 'H': return HOME;
             }
         }
         return '\x1b';
@@ -265,6 +278,13 @@ void editorProcessKeypress() {
                     editorMoveCursor(c == PAGE_UP ? CURSOR_UP : CURSOR_DOWN);
                 }
             }
+            break;
+
+        case HOME:
+            E.cx = 0;
+            break;
+        case END:
+            E.cx = E.screencols - 1;
             break;
     }
 }
